@@ -6,7 +6,7 @@ import asyncio
 
 # ===== 키 설정 =====
 TELEGRAM_TOKEN = "8675137094:AAHeB8RHh2ZPDBxuS8i0g4QXreH3GYwTWn4"
-ANTHROPIC_API_KEY = "sk-ant-api03-wyUhVprHhxf9wjpF-ZrI8EhS8rdS8GRHP3jptAhBjPD2fWeyooB9rbUNraR2Q9bOxQ_GRimk6XZXQGXa7nEB0A-QviY2gAA"
+ANTHROPIC_API_KEY = "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"
 ADMIN_ID = 8498001355
 # =================
 
