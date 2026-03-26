@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 # ===== 키 설정 =====
 TELEGRAM_TOKEN = "8675137094:AAHeB8RHh2ZPDBxuS8i0g4QXreH3GYwTWn4"
 ADMIN_ID = 8498001355
-CHANNEL_ID = "@sonho009"
+CHANNEL_ID = "@hoho202012"
 # =================
 
 polls = {}
