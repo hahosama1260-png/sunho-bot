@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 # ===== 키 설정 =====
 TELEGRAM_TOKEN = "8675137094:AAHeB8RHh2ZPDBxuS8i0g4QXreH3GYwTWn4"
 ADMIN_ID = 8498001355
+CHANNEL_ID = "@sonho009"
 # =================
 
 polls = {}
@@ -13,61 +14,70 @@ def is_admin(user_id):
     return user_id == ADMIN_ID
 
 async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    for member in update.message.new_chat_members:
-        name = member.first_name
-        await update.message.reply_text(
-            f"👋 {name}님 환영합니다!\n"
-            f"투자/주식 커뮤니티에 오신 것을 환영해요 📝\n"
-            f"궁금한 점은 관리자에게 문의해주세요!"
-        )
+    if update.message and update.message.new_chat_members:
+        for member in update.message.new_chat_members:
+            name = member.first_name
+            await update.message.reply_text(
+                f"👋 {name}님 환영합니다!\n"
+                f"투자/주식 커뮤니티에 오신 것을 환영해요 📝\n"
+                f"궁금한 점은 관리자에게 문의해주세요!"
+            )
 
 async def notice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.message.from_user.id):
-        await update.message.reply_text("❌ 관리자만 공지할 수 있어요!")
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("❌ 관리자만 공지할 수 있어요!")
         return
     if not context.args:
-        await update.message.reply_text("사용법: /notice [내용]")
+        await update.effective_message.reply_text("사용법: /notice [내용]")
         return
     text = " ".join(context.args)
-    await update.message.reply_text(f"📌 공지사항\n\n{text}")
+    await context.bot.send_message(chat_id=CHANNEL_ID, text=f"📌 공지사항\n\n{text}")
+    await update.effective_message.reply_text("✅ 공지 전송 완료!")
 
 async def poll(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.message.from_user.id):
-        await update.message.reply_text("❌ 관리자만 투표를 만들 수 있어요!")
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("❌ 관리자만 투표를 만들 수 있어요!")
         return
     if len(context.args) < 4:
-        await update.message.reply_text("사용법: /poll [마감시간(분)] [제목] [선택1] [선택2] ...\n/poll 60 오늘장전망 상승 하락 보합")
+        await update.effective_message.reply_text("사용법: /poll [마감시간(분)] [제목] [선택1] [선택2] ...\n예시: /poll 60 오늘장전망 상승 하락 보합")
         return
     try:
         minutes = int(context.args[0])
     except:
-        await update.message.reply_text("마감시간은 숫자로 입력해주세요!")
+        await update.effective_message.reply_text("마감시간은 숫자로 입력해주세요!")
         return
     title = context.args[1]
     options = context.args[2:]
     end_time = datetime.now() + timedelta(minutes=minutes)
-    poll_id = str(update.message.message_id)
+    keyboard = [[InlineKeyboardButton(opt, callback_data=f"poll_{title}:{opt}") for opt in options]]
+    keyboard.append([InlineKeyboardButton("📊 결과 보기", callback_data=f"poll_{title}:result")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    end_str = end_time.strftime('%H:%M')
+    poll_msg = await context.bot.send_message(
+        chat_id=CHANNEL_ID,
+        text=f"📊 투표: {title}\n⏰ 마감: {end_str}\n\n아래 버튼을 눌러 투표하세요!",
+        reply_markup=reply_markup
+    )
+    poll_id = str(poll_msg.message_id)
     polls[poll_id] = {
         'title': title,
         'options': {opt: [] for opt in options},
         'end_time': end_time,
         'voters': []
     }
-    keyboard = [[InlineKeyboardButton(opt, callback_data=f"{poll_id}:{opt}") for opt in options]]
-    keyboard.append([InlineKeyboardButton("📊 결과 보기", callback_data=f"{poll_id}:result")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    end_str = end_time.strftime('%H:%M')
-    await update.message.reply_text(
-        f"📊 투표: {title}\n⏰ 마감: {end_str}\n\n아래 버튼을 눌러 투표하세요!",
-        reply_markup=reply_markup
-    )
+    await update.effective_message.reply_text("✅ 투표 전송 완료!")
 
 async def vote_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    data = query.data.split(":")
-    poll_id = data[0]
-    choice = data[1]
+    data = query.data
+    if not data.startswith("poll_"):
+        return
+    data = data[5:]
+    parts = data.split(":")
+    title = parts[0]
+    choice = parts[1]
+    poll_id = str(query.message.message_id)
     if poll_id not in polls:
         await query.answer("투표가 종료되었습니다!", show_alert=True)
         return
