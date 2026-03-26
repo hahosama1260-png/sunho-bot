@@ -1,16 +1,12 @@
-import anthropic
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from datetime import datetime, timedelta
-import asyncio
 
 # ===== 키 설정 =====
 TELEGRAM_TOKEN = "8675137094:AAHeB8RHh2ZPDBxuS8i0g4QXreH3GYwTWn4"
-ANTHROPIC_API_KEY = "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"
 ADMIN_ID = 8498001355
 # =================
 
-client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 polls = {}
 
 def is_admin(user_id):
@@ -22,7 +18,7 @@ async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"👋 {name}님 환영합니다!\n"
             f"투자/주식 커뮤니티에 오신 것을 환영해요 📝\n"
-            f"궁금한 점은 ?질문 으로 물어보세요!"
+            f"궁금한 점은 관리자에게 문의해주세요!"
         )
 
 async def notice(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -106,26 +102,12 @@ async def vote_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         result += f"{opt}\n  {bar} {len(voters)}표 ({pct:.1f}%)\n\n"
     await query.edit_message_text(result, reply_markup=query.message.reply_markup)
 
-async def ai_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if not text.startswith("?"):
-        return
-    question = text[1:].strip()
-    await update.message.reply_text("🤔 답변 생성 중...")
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=500,
-        messages=[{"role": "user", "content": f"투자/주식 관련 질문입니다: {question}"}]
-    )
-    await update.message.reply_text(f"🤖 AI 답변:\n{response.content[0].text}")
-
 def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome))
     app.add_handler(CommandHandler("notice", notice))
     app.add_handler(CommandHandler("poll", poll))
     app.add_handler(CallbackQueryHandler(vote_callback))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_reply))
     print("봇 시작됨!")
     app.run_polling(drop_pending_updates=True)
 
